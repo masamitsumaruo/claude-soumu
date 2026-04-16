@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo - 総務タスク管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3498db;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --success: #27ae60;
+            --bg: #f5f6fa;
+        }
+        body { background: var(--bg); }
+        .navbar { background: linear-gradient(135deg, #2c3e50, #3498db) !important; }
+        .card { border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-radius: 12px; }
+        .btn-primary { background: var(--primary); border-color: var(--primary); }
+        .todo-item { transition: all 0.3s ease; border-left: 4px solid transparent; }
+        .todo-item:hover { background: #f0f4ff; }
+        .todo-done { opacity: 0.5; }
+        .todo-done .todo-title { text-decoration: line-through; }
+        .priority-high { border-left-color: var(--danger) !important; }
+        .priority-medium { border-left-color: var(--warning) !important; }
+        .priority-low { border-left-color: var(--success) !important; }
+        .badge-high { background: var(--danger) !important; }
+        .badge-medium { background: var(--warning) !important; }
+        .badge-low { background: var(--success) !important; }
+        .filter-btn.active { font-weight: bold; box-shadow: 0 0 0 2px var(--primary); }
+        .due-overdue { color: var(--danger); font-weight: bold; }
+        .due-today { color: var(--warning); font-weight: bold; }
+        .due-future { color: #6c757d; }
+        .stat-card { transition: transform 0.2s; cursor: pointer; }
+        .stat-card:hover { transform: translateY(-3px); }
+        .empty-state { padding: 60px 20px; }
+        .todo-check { width: 24px; height: 24px; cursor: pointer; }
+        .category-tag { font-size: 0.75rem; }
+        .drag-over { background: #e8f0fe; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#"><i class="bi bi-check2-square"></i> 総務Todo管理</a>
+        </div>
+    </nav>
+
+    <div class="container mb-5">
+        <!-- Stats -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3 col-6">
+                <div class="card stat-card p-3 text-center" onclick="setFilter('all')">
+                    <div class="text-primary fs-2"><i class="bi bi-list-task"></i></div>
+                    <h3 id="stat-all">0</h3>
+                    <p class="text-muted mb-0 small">全タスク</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="card stat-card p-3 text-center" onclick="setFilter('active')">
+                    <div class="text-warning fs-2"><i class="bi bi-clock"></i></div>
+                    <h3 id="stat-active">0</h3>
+                    <p class="text-muted mb-0 small">未完了</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="card stat-card p-3 text-center" onclick="setFilter('done')">
+                    <div class="text-success fs-2"><i class="bi bi-check-circle"></i></div>
+                    <h3 id="stat-done">0</h3>
+                    <p class="text-muted mb-0 small">完了</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="card stat-card p-3 text-center" onclick="setFilter('overdue')">
+                    <div class="text-danger fs-2"><i class="bi bi-exclamation-triangle"></i></div>
+                    <h3 id="stat-overdue">0</h3>
+                    <p class="text-muted mb-0 small">期限超過</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add + Filter -->
+        <div class="card p-3 mb-4">
+            <form id="addForm" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small mb-1">タスク名 <span class="text-danger">*</span></label>
+                    <input type="text" id="addTitle" class="form-control" placeholder="新しいタスクを入力..." required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">優先度</label>
+                    <select id="addPriority" class="form-select">
+                        <option value="medium">中</option>
+                        <option value="high">高</option>
+                        <option value="low">低</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">カテゴリ</label>
+                    <input type="text" id="addCategory" class="form-control" placeholder="例: 発注" list="catList">
+                    <datalist id="catList"></datalist>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">期限</label>
+                    <input type="date" id="addDueDate" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg"></i> 追加</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Filters -->
+        <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+            <span class="text-muted small"><i class="bi bi-funnel"></i></span>
+            <button class="btn btn-sm btn-outline-secondary filter-btn active" data-filter="all" onclick="setFilter('all')">全て</button>
+            <button class="btn btn-sm btn-outline-primary filter-btn" data-filter="active" onclick="setFilter('active')">未完了</button>
+            <button class="btn btn-sm btn-outline-success filter-btn" data-filter="done" onclick="setFilter('done')">完了</button>
+            <button class="btn btn-sm btn-outline-danger filter-btn" data-filter="overdue" onclick="setFilter('overdue')">期限超過</button>
+            <span class="mx-1 text-muted">|</span>
+            <button class="btn btn-sm btn-outline-secondary filter-btn active" data-priority="all" onclick="setPriority('all')">全優先度</button>
+            <button class="btn btn-sm btn-outline-danger filter-btn" data-priority="high" onclick="setPriority('high')">高</button>
+            <button class="btn btn-sm btn-outline-warning filter-btn" data-priority="medium" onclick="setPriority('medium')">中</button>
+            <button class="btn btn-sm btn-outline-success filter-btn" data-priority="low" onclick="setPriority('low')">低</button>
+            <span class="mx-1 text-muted" id="catFilterArea"></span>
+            <span class="ms-auto">
+                <button class="btn btn-sm btn-outline-danger" onclick="clearDone()" title="完了タスクを一括削除"><i class="bi bi-trash"></i> 完了を削除</button>
+            </span>
+        </div>
+
+        <!-- Todo List -->
+        <div id="todoList"></div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="card empty-state text-center text-muted" style="display:none;">
+            <i class="bi bi-check2-all fs-1 text-success"></i>
+            <p class="mt-2 mb-0">タスクはありません</p>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="editForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="bi bi-pencil"></i> タスク編集</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="editId">
+                        <div class="mb-3">
+                            <label class="form-label">タイトル <span class="text-danger">*</span></label>
+                            <input type="text" id="editTitle" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">詳細メモ</label>
+                            <textarea id="editDesc" class="form-control" rows="3"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">優先度</label>
+                                <select id="editPriority" class="form-select">
+                                    <option value="high">高</option>
+                                    <option value="medium">中</option>
+                                    <option value="low">低</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">カテゴリ</label>
+                                <input type="text" id="editCategory" class="form-control" list="catList">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">期限</label>
+                                <input type="date" id="editDueDate" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> 保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    const STORAGE_KEY = 'soumu-todos';
+    let todos = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let currentFilter = 'all';
+    let currentPriority = 'all';
+    let currentCategory = '';
+    const priorityLabel = { high: '高', medium: '中', low: '低' };
+    const priorityOrder = { high: 0, medium: 1, low: 2 };
+
+    function save() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+    }
+
+    function today() {
+        return new Date().toISOString().slice(0, 10);
+    }
+
+    function getCategories() {
+        const cats = new Set();
+        todos.forEach(t => { if (t.category) cats.add(t.category); });
+        return [...cats].sort();
+    }
+
+    function updateCatList() {
+        const cats = getCategories();
+        document.getElementById('catList').innerHTML = cats.map(c => `<option value="${c}">`).join('');
+        const area = document.getElementById('catFilterArea');
+        if (cats.length > 0) {
+            area.innerHTML = '| ' +
+                `<button class="btn btn-sm btn-outline-secondary filter-btn ms-1 ${!currentCategory ? 'active' : ''}" onclick="setCategory('')">全カテゴリ</button> ` +
+                cats.map(c =>
+                    `<button class="btn btn-sm btn-outline-info filter-btn ms-1 ${currentCategory === c ? 'active' : ''}" onclick="setCategory('${c.replace(/'/g, "\\'")}')">${c}</button>`
+                ).join(' ');
+        } else {
+            area.innerHTML = '';
+        }
+    }
+
+    function getFiltered() {
+        const t = today();
+        return todos.filter(todo => {
+            if (currentFilter === 'active' && todo.done) return false;
+            if (currentFilter === 'done' && !todo.done) return false;
+            if (currentFilter === 'overdue' && (todo.done || !todo.dueDate || todo.dueDate >= t)) return false;
+            if (currentPriority !== 'all' && todo.priority !== currentPriority) return false;
+            if (currentCategory && todo.category !== currentCategory) return false;
+            return true;
+        }).sort((a, b) => {
+            if (a.done !== b.done) return a.done ? 1 : -1;
+            if (priorityOrder[a.priority] !== priorityOrder[b.priority])
+                return priorityOrder[a.priority] - priorityOrder[b.priority];
+            if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+            if (a.dueDate) return -1;
+            if (b.dueDate) return 1;
+            return b.createdAt.localeCompare(a.createdAt);
+        });
+    }
+
+    function updateStats() {
+        const t = today();
+        document.getElementById('stat-all').textContent = todos.length;
+        document.getElementById('stat-active').textContent = todos.filter(x => !x.done).length;
+        document.getElementById('stat-done').textContent = todos.filter(x => x.done).length;
+        document.getElementById('stat-overdue').textContent = todos.filter(x => !x.done && x.dueDate && x.dueDate < t).length;
+    }
+
+    function dueDateClass(dueDate, done) {
+        if (!dueDate || done) return 'due-future';
+        const t = today();
+        if (dueDate < t) return 'due-overdue';
+        if (dueDate === t) return 'due-today';
+        return 'due-future';
+    }
+
+    function escapeHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
+
+    function render() {
+        const filtered = getFiltered();
+        const list = document.getElementById('todoList');
+        const empty = document.getElementById('emptyState');
+
+        updateStats();
+        updateCatList();
+
+        // Update active filter buttons
+        document.querySelectorAll('[data-filter]').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.filter === currentFilter);
+        });
+        document.querySelectorAll('[data-priority]').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.priority === currentPriority);
+        });
+
+        if (filtered.length === 0) {
+            list.innerHTML = '';
+            empty.style.display = 'block';
+            return;
+        }
+        empty.style.display = 'none';
+
+        list.innerHTML = '<div class="card"><div class="list-group list-group-flush">' +
+            filtered.map(todo => {
+                const t = today();
+                return `
+                <div class="list-group-item todo-item ${todo.done ? 'todo-done' : ''} priority-${todo.priority}" data-id="${todo.id}">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="pt-1">
+                            <input type="checkbox" class="form-check-input todo-check" ${todo.done ? 'checked' : ''}
+                                onchange="toggleTodo('${todo.id}')" title="${todo.done ? '未完了に戻す' : '完了にする'}">
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <strong class="todo-title">${escapeHtml(todo.title)}</strong>
+                                <span class="badge badge-${todo.priority}">${priorityLabel[todo.priority]}</span>
+                                ${todo.category ? `<span class="badge bg-info category-tag">${escapeHtml(todo.category)}</span>` : ''}
+                                ${todo.dueDate ? `<small class="${dueDateClass(todo.dueDate, todo.done)}"><i class="bi bi-calendar"></i> ${todo.dueDate}</small>` : ''}
+                            </div>
+                            ${todo.description ? `<small class="text-muted d-block mt-1">${escapeHtml(todo.description)}</small>` : ''}
+                        </div>
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-sm btn-outline-primary" onclick="openEdit('${todo.id}')" title="編集">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteTodo('${todo.id}')" title="削除">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('') +
+            '</div></div>';
+    }
+
+    function addTodo(title, priority, category, dueDate) {
+        todos.push({
+            id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+            title,
+            description: '',
+            priority,
+            category,
+            dueDate: dueDate || '',
+            done: false,
+            createdAt: new Date().toISOString(),
+            completedAt: null
+        });
+        save();
+        render();
+    }
+
+    function toggleTodo(id) {
+        const todo = todos.find(t => t.id === id);
+        if (todo) {
+            todo.done = !todo.done;
+            todo.completedAt = todo.done ? new Date().toISOString() : null;
+            save();
+            render();
+        }
+    }
+
+    function deleteTodo(id) {
+        if (!confirm('このタスクを削除しますか？')) return;
+        todos = todos.filter(t => t.id !== id);
+        save();
+        render();
+    }
+
+    function clearDone() {
+        const doneCount = todos.filter(t => t.done).length;
+        if (doneCount === 0) { alert('完了タスクはありません'); return; }
+        if (!confirm(`完了済みの ${doneCount} 件を削除しますか？`)) return;
+        todos = todos.filter(t => !t.done);
+        save();
+        render();
+    }
+
+    function openEdit(id) {
+        const todo = todos.find(t => t.id === id);
+        if (!todo) return;
+        document.getElementById('editId').value = id;
+        document.getElementById('editTitle').value = todo.title;
+        document.getElementById('editDesc').value = todo.description || '';
+        document.getElementById('editPriority').value = todo.priority;
+        document.getElementById('editCategory').value = todo.category || '';
+        document.getElementById('editDueDate').value = todo.dueDate || '';
+        new bootstrap.Modal(document.getElementById('editModal')).show();
+    }
+
+    function setFilter(f) { currentFilter = f; render(); }
+    function setPriority(p) { currentPriority = p; render(); }
+    function setCategory(c) { currentCategory = c; render(); }
+
+    // Add form
+    document.getElementById('addForm').addEventListener('submit', e => {
+        e.preventDefault();
+        const title = document.getElementById('addTitle').value.trim();
+        if (!title) return;
+        addTodo(
+            title,
+            document.getElementById('addPriority').value,
+            document.getElementById('addCategory').value.trim(),
+            document.getElementById('addDueDate').value
+        );
+        document.getElementById('addTitle').value = '';
+        document.getElementById('addCategory').value = '';
+        document.getElementById('addDueDate').value = '';
+        document.getElementById('addPriority').value = 'medium';
+        document.getElementById('addTitle').focus();
+    });
+
+    // Edit form
+    document.getElementById('editForm').addEventListener('submit', e => {
+        e.preventDefault();
+        const id = document.getElementById('editId').value;
+        const todo = todos.find(t => t.id === id);
+        if (!todo) return;
+        todo.title = document.getElementById('editTitle').value.trim();
+        todo.description = document.getElementById('editDesc').value.trim();
+        todo.priority = document.getElementById('editPriority').value;
+        todo.category = document.getElementById('editCategory').value.trim();
+        todo.dueDate = document.getElementById('editDueDate').value;
+        save();
+        render();
+        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+    });
+
+    // Keyboard shortcut: Ctrl+Enter to add
+    document.getElementById('addTitle').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            document.getElementById('addForm').requestSubmit();
+        }
+    });
+
+    // Initial render
+    render();
+    </script>
+</body>
+</html>
