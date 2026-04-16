@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}商品一覧 - 文房具管理{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-list-ul"></i> 商品一覧</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal"><i class="bi bi-plus-lg"></i> 新規追加</button>
+</div>
+<div class="card p-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead><tr><th>コード</th><th>商品名</th><th>購入先</th><th>正式名称</th><th>操作</th></tr></thead>
+            <tbody>
+            {% for p in products %}
+            <tr>
+                <td>{{ p['code'] }}</td>
+                <td><strong>{{ p['name'] }}</strong></td>
+                <td>{{ p['site'] }}</td>
+                <td><small>{{ p['formal_name'] }}</small></td>
+                <td class="text-nowrap">
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ p['code'] }}"><i class="bi bi-pencil"></i></button>
+                    <form method="POST" action="/products/delete/{{ p['code'] }}" class="d-inline" onsubmit="return confirm('削除しますか？')">
+                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                    </form>
+                </td>
+            </tr>
+            <!-- Edit Modal -->
+            <div class="modal fade" id="editModal{{ p['code'] }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <form method="POST" action="/products/edit/{{ p['code'] }}" class="modal-content">
+                        <div class="modal-header"><h5 class="modal-title">商品編集</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                        <div class="modal-body">
+                            <div class="mb-3"><label class="form-label">商品名</label><input name="name" class="form-control" value="{{ p['name'] }}" required></div>
+                            <div class="mb-3"><label class="form-label">購入先</label><input name="site" class="form-control" value="{{ p['site'] }}"></div>
+                            <div class="mb-3"><label class="form-label">正式名称</label><input name="formal_name" class="form-control" value="{{ p['formal_name'] }}"></div>
+                        </div>
+                        <div class="modal-footer"><button type="submit" class="btn btn-primary">更新</button></div>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="/products/add" class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">商品追加</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-3"><label class="form-label">コード</label><input name="code" type="number" class="form-control" required></div>
+                <div class="mb-3"><label class="form-label">商品名</label><input name="name" class="form-control" required></div>
+                <div class="mb-3"><label class="form-label">購入先</label><input name="site" class="form-control" value="アスクル"></div>
+                <div class="mb-3"><label class="form-label">正式名称</label><input name="formal_name" class="form-control"></div>
+            </div>
+            <div class="modal-footer"><button type="submit" class="btn btn-primary">追加</button></div>
+        </form>
+    </div>
+</div>
+{% endblock %}

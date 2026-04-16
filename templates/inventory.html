@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}在庫チェック表 - 文房具管理{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-boxes"></i> 在庫チェック表</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addInvModal"><i class="bi bi-plus-lg"></i> 新規追加</button>
+</div>
+<div class="card p-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle table-sm">
+            <thead><tr><th>NO</th><th>商品名</th><th>在庫数</th><th>発注数</th><th>残</th><th>発注判断</th><th>仕入数</th><th>使用数</th><th>基準数</th><th>備考</th><th>操作</th></tr></thead>
+            <tbody>
+            {% for r in rows %}
+            <tr class="{{ 'table-danger' if r['order_judgment'] else '' }}">
+                <td>{{ r['no'] }}</td>
+                <td><strong>{{ r['product_name'] }}</strong></td>
+                <td>{{ r['stock'] }}</td>
+                <td>{{ r['order_qty'] }}</td>
+                <td>
+                    {% if r['remaining'] <= r['order_threshold'] and r['order_threshold'] > 0 %}
+                    <span class="badge bg-danger">{{ r['remaining'] }}</span>
+                    {% else %}
+                    {{ r['remaining'] }}
+                    {% endif %}
+                </td>
+                <td>{% if r['order_judgment'] %}<span class="text-danger fw-bold">{{ r['order_judgment'] }}</span>{% endif %}</td>
+                <td>{{ r['supply_qty'] }}</td>
+                <td>{{ r['usage_qty'] }}</td>
+                <td>{{ r['order_threshold'] }}</td>
+                <td><small>{{ r['note'] }}</small></td>
+                <td class="text-nowrap">
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editInv{{ r['id'] }}"><i class="bi bi-pencil"></i></button>
+                    <form method="POST" action="/inventory/delete/{{ r['id'] }}" class="d-inline" onsubmit="return confirm('削除しますか？')">
+                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                    </form>
+                </td>
+            </tr>
+            <!-- Edit Modal -->
+            <div class="modal fade" id="editInv{{ r['id'] }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <form method="POST" action="/inventory/edit/{{ r['id'] }}" class="modal-content">
+                        <div class="modal-header"><h5 class="modal-title">{{ r['product_name'] }} 編集</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                        <div class="modal-body">
+                            <div class="mb-3"><label class="form-label">残数</label><input name="remaining" type="number" class="form-control" value="{{ r['remaining'] }}"></div>
+                            <div class="mb-3"><label class="form-label">発注数</label><input name="order_qty" type="number" class="form-control" value="{{ r['order_qty'] }}"></div>
+                            <div class="mb-3"><label class="form-label">発注基準数</label><input name="order_threshold" type="number" class="form-control" value="{{ r['order_threshold'] }}"></div>
+                            <div class="mb-3"><label class="form-label">備考</label><input name="note" class="form-control" value="{{ r['note'] }}"></div>
+                        </div>
+                        <div class="modal-footer"><button type="submit" class="btn btn-primary">更新</button></div>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addInvModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="/inventory/add" class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">在庫項目追加</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-3"><label class="form-label">商品名</label><input name="product_name" class="form-control" required></div>
+                <div class="mb-3"><label class="form-label">初期在庫</label><input name="stock" type="number" class="form-control" value="0"></div>
+                <div class="mb-3"><label class="form-label">残数</label><input name="remaining" type="number" class="form-control" value="0"></div>
+                <div class="mb-3"><label class="form-label">発注数</label><input name="order_qty" type="number" class="form-control" value="10"></div>
+                <div class="mb-3"><label class="form-label">発注基準数</label><input name="order_threshold" type="number" class="form-control" value="0"></div>
+                <div class="mb-3"><label class="form-label">備考</label><input name="note" class="form-control"></div>
+            </div>
+            <div class="modal-footer"><button type="submit" class="btn btn-primary">追加</button></div>
+        </form>
+    </div>
+</div>
+{% endblock %}

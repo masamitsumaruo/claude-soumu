@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}持出明細表 - 文房具管理{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-box-arrow-right"></i> 持出明細表</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal"><i class="bi bi-plus-lg"></i> 持出記録</button>
+</div>
+<div class="card p-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead><tr><th>日付</th><th>コード</th><th>商品名</th><th>仕入</th><th>使用</th><th>使用者</th><th>備考</th><th>操作</th></tr></thead>
+            <tbody>
+            {% for r in rows %}
+            <tr>
+                <td>{{ r['date'] }}</td>
+                <td>{{ r['code'] }}</td>
+                <td>{{ r['product_name'] }}</td>
+                <td>{{ r['supply'] if r['supply'] else '' }}</td>
+                <td><span class="badge bg-info">{{ r['usage'] }}</span></td>
+                <td>{{ r['user_name'] }}</td>
+                <td>{{ r['note'] }}</td>
+                <td>
+                    <form method="POST" action="/checkout/delete/{{ r['id'] }}" class="d-inline" onsubmit="return confirm('削除しますか？')">
+                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="/checkout/add" class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">持出記録</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">日付</label>
+                    <input name="date" type="date" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">商品</label>
+                    <select name="code" id="productSelect" class="form-select" required>
+                        <option value="">選択してください</option>
+                        {% for p in products %}
+                        <option value="{{ p['code'] }}">{{ p['code'] }} - {{ p['name'] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label">仕入数</label>
+                        <input name="supply" type="number" class="form-control" value="0" min="0">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label">使用数</label>
+                        <input name="usage" type="number" class="form-control" required min="0">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">使用者</label>
+                    <input name="user_name" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">備考</label>
+                    <input name="note" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer"><button type="submit" class="btn btn-primary">記録</button></div>
+        </form>
+    </div>
+</div>
+{% endblock %}

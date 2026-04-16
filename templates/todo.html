@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}Todo - 文房具管理{% endblock %}
+{% block extra_head %}
+<style>
+    .todo-item { transition: all 0.3s ease; }
+    .todo-item:hover { background: #f0f4ff; }
+    .todo-done td { opacity: 0.5; text-decoration: line-through; }
+    .priority-high { border-left: 4px solid #e74c3c !important; }
+    .priority-medium { border-left: 4px solid #f39c12 !important; }
+    .priority-low { border-left: 4px solid #27ae60 !important; }
+    .badge-high { background: #e74c3c; }
+    .badge-medium { background: #f39c12; }
+    .badge-low { background: #27ae60; }
+    .filter-btn.active { font-weight: bold; box-shadow: 0 0 0 2px #3498db; }
+    .category-tag { font-size: 0.75rem; }
+    .due-overdue { color: #e74c3c; font-weight: bold; }
+    .due-today { color: #f39c12; font-weight: bold; }
+    .due-future { color: #6c757d; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-check2-square"></i> Todo</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
+        <i class="bi bi-plus-lg"></i> 新規タスク
+    </button>
+</div>
+
+<!-- Filters -->
+<div class="card p-3 mb-4">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span class="text-muted me-2"><i class="bi bi-funnel"></i> フィルター:</span>
+        <a href="?status=all" class="btn btn-sm btn-outline-secondary filter-btn {{ 'active' if filter_status == 'all' }}">全て ({{ counts.all }})</a>
+        <a href="?status=active" class="btn btn-sm btn-outline-primary filter-btn {{ 'active' if filter_status == 'active' }}">未完了 ({{ counts.active }})</a>
+        <a href="?status=done" class="btn btn-sm btn-outline-success filter-btn {{ 'active' if filter_status == 'done' }}">完了 ({{ counts.done }})</a>
+        <span class="mx-2 text-muted">|</span>
+        <a href="?status={{ filter_status }}&priority=all" class="btn btn-sm btn-outline-secondary filter-btn {{ 'active' if filter_priority == 'all' }}">全優先度</a>
+        <a href="?status={{ filter_status }}&priority=high" class="btn btn-sm btn-outline-danger filter-btn {{ 'active' if filter_priority == 'high' }}">高</a>
+        <a href="?status={{ filter_status }}&priority=medium" class="btn btn-sm btn-outline-warning filter-btn {{ 'active' if filter_priority == 'medium' }}">中</a>
+        <a href="?status={{ filter_status }}&priority=low" class="btn btn-sm btn-outline-success filter-btn {{ 'active' if filter_priority == 'low' }}">低</a>
+        {% if categories %}
+        <span class="mx-2 text-muted">|</span>
+        <a href="?status={{ filter_status }}&priority={{ filter_priority }}" class="btn btn-sm btn-outline-secondary filter-btn {{ 'active' if not filter_category }}">全カテゴリ</a>
+        {% for cat in categories %}
+        <a href="?status={{ filter_status }}&priority={{ filter_priority }}&category={{ cat }}" class="btn btn-sm btn-outline-info filter-btn {{ 'active' if filter_category == cat }}">{{ cat }}</a>
+        {% endfor %}
+        {% endif %}
+    </div>
+</div>
+
+<!-- Todo List -->
+{% if todos %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th style="width:50px;"></th>
+                    <th>タスク</th>
+                    <th style="width:100px;">優先度</th>
+                    <th style="width:120px;">カテゴリ</th>
+                    <th style="width:120px;">期限</th>
+                    <th style="width:120px;">作成日</th>
+                    <th style="width:140px;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for todo in todos %}
+                <tr class="todo-item {{ 'todo-done' if todo['done'] }} priority-{{ todo['priority'] }}">
+                    <td class="text-center">
+                        <form method="POST" action="/todo/toggle/{{ todo['id'] }}" class="d-inline">
+                            <button type="submit" class="btn btn-sm {{ 'btn-success' if todo['done'] else 'btn-outline-secondary' }}">
+                                <i class="bi {{ 'bi-check-circle-fill' if todo['done'] else 'bi-circle' }}"></i>
+                            </button>
+                        </form>
+                    </td>
+                    <td>
+                        <strong>{{ todo['title'] }}</strong>
+                        {% if todo['description'] %}
+                        <br><small class="text-muted">{{ todo['description'] }}</small>
+                        {% endif %}
+                    </td>
+                    <td><span class="badge badge-{{ todo['priority'] }}">{{ {'high': '高', 'medium': '中', 'low': '低'}[todo['priority']] }}</span></td>
+                    <td>
+                        {% if todo['category'] %}
+                        <span class="badge bg-info category-tag">{{ todo['category'] }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if todo['due_date'] %}
+                        <span class="{{ 'due-overdue' if todo['due_date'] < today and not todo['done'] else ('due-today' if todo['due_date'] == today else 'due-future') }}">
+                            {{ todo['due_date'] }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td><small class="text-muted">{{ todo['created_at'][:10] }}</small></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ todo['id'] }}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <form method="POST" action="/todo/delete/{{ todo['id'] }}" class="d-inline" onsubmit="return confirm('削除しますか？')">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card p-5 text-center text-muted">
+    <i class="bi bi-check2-all fs-1 text-success"></i>
+    <p class="mt-2 mb-0">タスクはありません</p>
+</div>
+{% endif %}
+
+<!-- Add Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="/todo/add">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-lg"></i> 新規タスク</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">タイトル <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">詳細</label>
+                        <textarea name="description" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">優先度</label>
+                            <select name="priority" class="form-select">
+                                <option value="medium">中</option>
+                                <option value="high">高</option>
+                                <option value="low">低</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">カテゴリ</label>
+                            <input type="text" name="category" class="form-control" list="categoryList" placeholder="例: 発注, 事務">
+                            <datalist id="categoryList">
+                                {% for cat in categories %}
+                                <option value="{{ cat }}">
+                                {% endfor %}
+                            </datalist>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">期限</label>
+                            <input type="date" name="due_date" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> 追加</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modals -->
+{% for todo in todos %}
+<div class="modal fade" id="editModal{{ todo['id'] }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="/todo/edit/{{ todo['id'] }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil"></i> タスク編集</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">タイトル <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" value="{{ todo['title'] }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">詳細</label>
+                        <textarea name="description" class="form-control" rows="3">{{ todo['description'] or '' }}</textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">優先度</label>
+                            <select name="priority" class="form-select">
+                                <option value="high" {{ 'selected' if todo['priority'] == 'high' }}>高</option>
+                                <option value="medium" {{ 'selected' if todo['priority'] == 'medium' }}>中</option>
+                                <option value="low" {{ 'selected' if todo['priority'] == 'low' }}>低</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">カテゴリ</label>
+                            <input type="text" name="category" class="form-control" value="{{ todo['category'] or '' }}" list="categoryList">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">期限</label>
+                            <input type="date" name="due_date" class="form-control" value="{{ todo['due_date'] or '' }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> 保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

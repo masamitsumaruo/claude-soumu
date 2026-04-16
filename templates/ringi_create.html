@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}稟議書作成 - 文房具管理{% endblock %}
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-file-earmark-plus"></i> 稟議書作成</h2>
+
+{% if alerts %}
+<div class="alert alert-warning">
+    <strong><i class="bi bi-exclamation-triangle"></i> 発注が必要な商品が {{ alerts|length }} 件あります</strong>（下の一覧に自動追加済み）
+</div>
+{% endif %}
+
+<form method="POST" action="/ringi/create" id="ringiForm">
+    <div class="card p-4">
+        <h5 class="mb-3">事務用品・消耗品 購入稟議書</h5>
+        <div class="table-responsive">
+            <table class="table table-bordered" id="itemTable">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:50px">No.</th>
+                        <th style="width:80px">コード</th>
+                        <th>購入先</th>
+                        <th>商品名</th>
+                        <th style="width:80px">個数</th>
+                        <th style="width:100px">単価</th>
+                        <th style="width:100px">金額</th>
+                        <th style="width:60px">新規</th>
+                        <th>使用目的</th>
+                        <th>依頼者</th>
+                        <th>検索URL</th>
+                        <th style="width:50px"></th>
+                    </tr>
+                </thead>
+                <tbody id="itemBody">
+                    {% for a in alerts %}
+                    <tr class="item-row">
+                        <td class="row-num">{{ loop.index }}</td>
+                        <td><input name="code[]" type="number" class="form-control form-control-sm" value="{{ a['code'] or a['no'] }}"></td>
+                        <td><input name="supplier[]" class="form-control form-control-sm supplier-input" value="{{ a['site'] or 'アスクル' }}"></td>
+                        <td><input name="product_name[]" class="form-control form-control-sm product-name-input" value="{{ a['formal_name'] or a['product_name'] }}" required></td>
+                        <td><input name="quantity[]" type="number" class="form-control form-control-sm qty-input" value="{{ a['order_qty'] }}" min="0"></td>
+                        <td><input name="unit_price[]" type="number" class="form-control form-control-sm price-input" value="0" min="0"></td>
+                        <td><input name="amount[]" type="number" class="form-control form-control-sm amount-display" value="0" readonly tabindex="-1"></td>
+                        <td class="text-center"><input name="is_new[]" type="checkbox" class="form-check-input" value="1"></td>
+                        <td><input name="purpose[]" class="form-control form-control-sm" value=""></td>
+                        <td><input name="requester[]" class="form-control form-control-sm" value=""></td>
+                        <td>
+                            <input name="search_url[]" class="form-control form-control-sm url-input" value="" readonly>
+                            <button type="button" class="btn btn-sm btn-outline-info mt-1 search-btn"><i class="bi bi-search"></i> 検索</button>
+                        </td>
+                        <td><button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-x"></i></button></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="6" class="text-end fw-bold">合計</td>
+                        <td id="totalAmount" class="fw-bold">0</td>
+                        <td colspan="5"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <button type="button" class="btn btn-outline-secondary mb-3" id="addRow"><i class="bi bi-plus"></i> 行を追加</button>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> 稟議書を作成</button>
+            <a href="/ringi" class="btn btn-outline-secondary">キャンセル</a>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function calcAmount(row) {
+    const qty = parseInt(row.querySelector('.qty-input').value) || 0;
+    const price = parseInt(row.querySelector('.price-input').value) || 0;
+    row.querySelector('.amount-display').value = qty * price;
+    calcTotal();
+}
+
+function calcTotal() {
+    let total = 0;
+    document.querySelectorAll('.amount-display').forEach(el => {
+        total += parseInt(el.value) || 0;
+    });
+    document.getElementById('totalAmount').textContent = total.toLocaleString();
+}
+
+function renumberRows() {
+    document.querySelectorAll('.row-num').forEach((el, i) => {
+        el.textContent = i + 1;
+    });
+}
+
+function bindRow(row) {
+    row.querySelector('.qty-input').addEventListener('input', () => calcAmount(row));
+    row.querySelector('.price-input').addEventListener('input', () => calcAmount(row));
+    row.querySelector('.remove-row').addEventListener('click', () => {
+        row.remove();
+        renumberRows();
+        calcTotal();
+    });
+    row.querySelector('.search-btn').addEventListener('click', () => {
+        const name = row.querySelector('.product-name-input').value;
+        const supplier = row.querySelector('.supplier-input').value;
+        fetch(`/api/search_url?name=${encodeURIComponent(name)}&supplier=${encodeURIComponent(supplier)}`)
+            .then(r => r.json())
+            .then(data => {
+                row.querySelector('.url-input').value = data.url;
+                window.open(data.url, '_blank');
+            });
+    });
+}
+
+document.querySelectorAll('.item-row').forEach(bindRow);
+calcTotal();
+
+document.getElementById('addRow').addEventListener('click', () => {
+    const tbody = document.getElementById('itemBody');
+    const rowCount = tbody.querySelectorAll('.item-row').length + 1;
+    const tr = document.createElement('tr');
+    tr.className = 'item-row';
+    tr.innerHTML = `
+        <td class="row-num">${rowCount}</td>
+        <td><input name="code[]" type="number" class="form-control form-control-sm"></td>
+        <td><input name="supplier[]" class="form-control form-control-sm supplier-input" value="アスクル"></td>
+        <td><input name="product_name[]" class="form-control form-control-sm product-name-input" required></td>
+        <td><input name="quantity[]" type="number" class="form-control form-control-sm qty-input" value="1" min="0"></td>
+        <td><input name="unit_price[]" type="number" class="form-control form-control-sm price-input" value="0" min="0"></td>
+        <td><input name="amount[]" type="number" class="form-control form-control-sm amount-display" value="0" readonly tabindex="-1"></td>
+        <td class="text-center"><input name="is_new[]" type="checkbox" class="form-check-input" value="1"></td>
+        <td><input name="purpose[]" class="form-control form-control-sm"></td>
+        <td><input name="requester[]" class="form-control form-control-sm"></td>
+        <td>
+            <input name="search_url[]" class="form-control form-control-sm url-input" readonly>
+            <button type="button" class="btn btn-sm btn-outline-info mt-1 search-btn"><i class="bi bi-search"></i> 検索</button>
+        </td>
+        <td><button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-x"></i></button></td>
+    `;
+    tbody.appendChild(tr);
+    bindRow(tr);
+});
+</script>
+{% endblock %}

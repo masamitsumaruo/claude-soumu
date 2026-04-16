@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>施工体系図 作成アプリ</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Yu Gothic", "Meiryo", sans-serif; margin: 0; background: #f4f5f7; color: #222; }
+  header { background: #1f3a5f; color: #fff; padding: 10px 18px; display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 18px; margin: 0; flex: 1; }
+  header button { background: #3b6ea5; color: #fff; border: none; padding: 7px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  header button:hover { background: #4f83bf; }
+  .layout { display: flex; height: calc(100vh - 52px); }
+  .panel-left { width: 460px; background: #fff; border-right: 1px solid #d0d5dd; overflow-y: auto; padding: 14px; }
+  .panel-right { flex: 1; overflow: auto; background: #f4f5f7; padding: 20px; }
+  h2 { font-size: 14px; margin: 14px 0 6px; color: #1f3a5f; border-left: 4px solid #1f3a5f; padding-left: 6px; }
+  label { display: block; font-size: 12px; margin-top: 6px; color: #555; }
+  input, select, textarea { width: 100%; padding: 5px 7px; border: 1px solid #c7ccd4; border-radius: 3px; font-size: 13px; font-family: inherit; }
+  textarea { resize: vertical; min-height: 40px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ledger-item { border: 1px solid #d0d5dd; border-radius: 5px; padding: 8px; margin-bottom: 6px; background: #fafbfc; font-size: 12px; cursor: pointer; }
+  .ledger-item:hover { background: #eef3fa; }
+  .ledger-item.selected { background: #e3ecf7; border-color: #3b6ea5; }
+  .ledger-item .name { font-weight: bold; font-size: 13px; }
+  .ledger-item .meta { color: #666; font-size: 11px; margin-top: 2px; }
+  .tier-tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 10px; color: #fff; margin-right: 4px; }
+  .tier-owner { background: #555; }
+  .tier-prime { background: #c0392b; }
+  .tier-1 { background: #2980b9; }
+  .tier-2 { background: #27ae60; }
+  .tier-3 { background: #d68910; }
+  .tier-4 { background: #8e44ad; }
+  .btn { background: #1f3a5f; color: #fff; border: none; padding: 6px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; }
+  .btn.secondary { background: #7b8794; }
+  .btn.danger { background: #b33a3a; }
+  .btn:hover { opacity: 0.9; }
+  .form-actions { display: flex; gap: 6px; margin-top: 10px; }
+  /* Diagram */
+  .diagram { background: #fff; padding: 20px; min-width: 100%; min-height: 90%; border: 1px solid #d0d5dd; }
+  .tier-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-bottom: 30px; position: relative; }
+  .tier-label { width: 100%; text-align: left; font-size: 12px; color: #1f3a5f; font-weight: bold; border-bottom: 1px dashed #aaa; margin-bottom: 8px; padding-bottom: 2px; }
+  .node { border: 2px solid #1f3a5f; border-radius: 5px; background: #fff; min-width: 220px; max-width: 260px; font-size: 11px; }
+  .node .node-head { background: #1f3a5f; color: #fff; padding: 4px 8px; font-weight: bold; font-size: 12px; border-radius: 3px 3px 0 0; display: flex; justify-content: space-between; }
+  .node .node-body { padding: 5px 8px; }
+  .node .node-body div { margin: 1px 0; }
+  .node .node-body .label { color: #777; font-size: 10px; display: inline-block; min-width: 58px; }
+  .node.owner { border-color: #333; }
+  .node.owner .node-head { background: #333; }
+  .node.prime { border-color: #c0392b; }
+  .node.prime .node-head { background: #c0392b; }
+  .node.sub-1 { border-color: #2980b9; }
+  .node.sub-1 .node-head { background: #2980b9; }
+  .node.sub-2 { border-color: #27ae60; }
+  .node.sub-2 .node-head { background: #27ae60; }
+  .node.sub-3 { border-color: #d68910; }
+  .node.sub-3 .node-head { background: #d68910; }
+  .node.sub-4 { border-color: #8e44ad; }
+  .node.sub-4 .node-head { background: #8e44ad; }
+  .project-header { background: #1f3a5f; color: #fff; padding: 10px 14px; margin-bottom: 14px; border-radius: 4px; }
+  .project-header h2 { color: #fff; border: none; margin: 0; font-size: 16px; }
+  .project-header .meta { font-size: 12px; margin-top: 4px; }
+  .empty-msg { text-align: center; color: #888; padding: 60px 20px; }
+  .group { border: 1px dashed #bbb; border-radius: 6px; padding: 10px; margin-bottom: 20px; background: #fcfcfc; }
+  .group-title { font-size: 11px; color: #666; margin-bottom: 6px; }
+  @media print {
+    header, .panel-left { display: none; }
+    .panel-right { padding: 0; }
+    .layout { height: auto; display: block; }
+    .diagram { border: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>施工体系図 作成アプリ</h1>
+  <button onclick="saveJSON()">💾 保存(JSON)</button>
+  <button onclick="document.getElementById('loadFile').click()">📂 読込</button>
+  <input type="file" id="loadFile" accept=".json" style="display:none" onchange="loadJSON(event)">
+  <button onclick="window.print()">🖨 印刷/PDF</button>
+  <button onclick="loadSample()">サンプル</button>
+  <button onclick="clearAll()" style="background:#b33a3a">クリア</button>
+</header>
+
+<div class="layout">
+  <!-- LEFT: Ledger editor -->
+  <div class="panel-left">
+    <h2>工事情報</h2>
+    <label>工事名</label>
+    <input id="projName" oninput="updateDiagram()">
+    <div class="row2">
+      <div><label>発注者</label><input id="projOwner" oninput="updateDiagram()"></div>
+      <div><label>工期</label><input id="projPeriod" placeholder="2026/4/1 〜 2027/3/31" oninput="updateDiagram()"></div>
+    </div>
+    <label>工事場所</label>
+    <input id="projLocation" oninput="updateDiagram()">
+
+    <h2>会社一覧 <span style="font-size:10px;color:#888">（クリックで編集）</span></h2>
+    <div id="ledgerList"></div>
+    <button class="btn" onclick="newCompany()">＋ 新規追加</button>
+
+    <div id="editorPane" style="display:none; margin-top:14px; border-top:2px solid #1f3a5f; padding-top:10px;">
+      <h2>会社編集</h2>
+      <label>階層</label>
+      <select id="f_tier">
+        <option value="prime">元請</option>
+        <option value="sub-1">一次下請</option>
+        <option value="sub-2">二次下請</option>
+        <option value="sub-3">三次下請</option>
+        <option value="sub-4">四次下請</option>
+      </select>
+      <label>上位会社（下請の場合）</label>
+      <select id="f_parent"></select>
+      <label>会社名 *</label>
+      <input id="f_name">
+      <label>代表者</label>
+      <input id="f_rep">
+      <div class="row2">
+        <div><label>工事内容</label><input id="f_work"></div>
+        <div><label>工期</label><input id="f_period"></div>
+      </div>
+      <div class="row2">
+        <div><label>現場代理人</label><input id="f_agent"></div>
+        <div><label>主任/監理技術者</label><input id="f_engineer"></div>
+      </div>
+      <div class="row2">
+        <div><label>安全衛生責任者</label><input id="f_safety"></div>
+        <div><label>専門技術者</label><input id="f_specialist"></div>
+      </div>
+      <label>備考</label>
+      <textarea id="f_note"></textarea>
+
+      <div class="form-actions">
+        <button class="btn" onclick="saveCompany()">保存</button>
+        <button class="btn secondary" onclick="cancelEdit()">キャンセル</button>
+        <button class="btn danger" onclick="deleteCompany()" style="margin-left:auto">削除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Diagram -->
+  <div class="panel-right">
+    <div class="diagram" id="diagram"></div>
+  </div>
+</div>
+
+<script>
+let state = {
+  project: { name: "", owner: "", period: "", location: "" },
+  companies: [] // {id, tier, parentId, name, rep, work, period, agent, engineer, safety, specialist, note}
+};
+let editingId = null;
+
+function uid(){ return Math.random().toString(36).slice(2,9); }
+
+function tierLabel(t){
+  return {'prime':'元請','sub-1':'一次下請','sub-2':'二次下請','sub-3':'三次下請','sub-4':'四次下請'}[t]||t;
+}
+function tierTagClass(t){
+  return {'prime':'tier-prime','sub-1':'tier-1','sub-2':'tier-2','sub-3':'tier-3','sub-4':'tier-4'}[t]||'';
+}
+
+function renderLedgerList(){
+  const box = document.getElementById('ledgerList');
+  box.innerHTML = '';
+  if(state.companies.length === 0){
+    box.innerHTML = '<div style="color:#999;font-size:12px;padding:8px">まだ登録がありません</div>';
+    return;
+  }
+  // sort by tier then name
+  const order = {'prime':0,'sub-1':1,'sub-2':2,'sub-3':3,'sub-4':4};
+  const sorted = [...state.companies].sort((a,b)=>(order[a.tier]-order[b.tier])|| a.name.localeCompare(b.name));
+  sorted.forEach(c=>{
+    const div = document.createElement('div');
+    div.className = 'ledger-item' + (c.id===editingId?' selected':'');
+    div.innerHTML = `<div class="name"><span class="tier-tag ${tierTagClass(c.tier)}">${tierLabel(c.tier)}</span>${escapeHtml(c.name||'(無名)')}</div>
+      <div class="meta">${escapeHtml(c.work||'')} ${c.period?('／'+escapeHtml(c.period)):''}</div>`;
+    div.onclick = ()=>editCompany(c.id);
+    box.appendChild(div);
+  });
+}
+
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function newCompany(){
+  editingId = null;
+  document.getElementById('editorPane').style.display = 'block';
+  ['f_name','f_rep','f_work','f_period','f_agent','f_engineer','f_safety','f_specialist','f_note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f_tier').value = state.companies.some(c=>c.tier==='prime')?'sub-1':'prime';
+  refreshParentSelect();
+  renderLedgerList();
+}
+
+function editCompany(id){
+  const c = state.companies.find(x=>x.id===id);
+  if(!c) return;
+  editingId = id;
+  document.getElementById('editorPane').style.display = 'block';
+  document.getElementById('f_tier').value = c.tier;
+  document.getElementById('f_name').value = c.name||'';
+  document.getElementById('f_rep').value = c.rep||'';
+  document.getElementById('f_work').value = c.work||'';
+  document.getElementById('f_period').value = c.period||'';
+  document.getElementById('f_agent').value = c.agent||'';
+  document.getElementById('f_engineer').value = c.engineer||'';
+  document.getElementById('f_safety').value = c.safety||'';
+  document.getElementById('f_specialist').value = c.specialist||'';
+  document.getElementById('f_note').value = c.note||'';
+  refreshParentSelect(c.parentId);
+  renderLedgerList();
+}
+
+function refreshParentSelect(selected){
+  const tier = document.getElementById('f_tier').value;
+  const sel = document.getElementById('f_parent');
+  sel.innerHTML = '<option value="">（なし／元請）</option>';
+  const parentTier = {'sub-1':'prime','sub-2':'sub-1','sub-3':'sub-2','sub-4':'sub-3'}[tier];
+  if(!parentTier){ sel.disabled = true; return; }
+  sel.disabled = false;
+  state.companies.filter(c=>c.tier===parentTier && c.id!==editingId).forEach(c=>{
+    const o = document.createElement('option');
+    o.value = c.id; o.textContent = c.name;
+    if(c.id===selected) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+document.addEventListener('change', e=>{
+  if(e.target.id==='f_tier') refreshParentSelect();
+});
+
+function saveCompany(){
+  const name = document.getElementById('f_name').value.trim();
+  if(!name){ alert('会社名は必須です'); return; }
+  const data = {
+    tier: document.getElementById('f_tier').value,
+    parentId: document.getElementById('f_parent').value||null,
+    name, rep: document.getElementById('f_rep').value,
+    work: document.getElementById('f_work').value,
+    period: document.getElementById('f_period').value,
+    agent: document.getElementById('f_agent').value,
+    engineer: document.getElementById('f_engineer').value,
+    safety: document.getElementById('f_safety').value,
+    specialist: document.getElementById('f_specialist').value,
+    note: document.getElementById('f_note').value,
+  };
+  if(editingId){
+    Object.assign(state.companies.find(c=>c.id===editingId), data);
+  } else {
+    state.companies.push({id: uid(), ...data});
+  }
+  editingId = null;
+  document.getElementById('editorPane').style.display = 'none';
+  renderLedgerList(); updateDiagram();
+}
+
+function cancelEdit(){
+  editingId = null;
+  document.getElementById('editorPane').style.display = 'none';
+  renderLedgerList();
+}
+
+function deleteCompany(){
+  if(!editingId) return;
+  if(!confirm('削除しますか？下位の会社の親参照もクリアされます。')) return;
+  state.companies = state.companies.filter(c=>c.id!==editingId);
+  state.companies.forEach(c=>{ if(c.parentId===editingId) c.parentId=null; });
+  editingId = null;
+  document.getElementById('editorPane').style.display = 'none';
+  renderLedgerList(); updateDiagram();
+}
+
+function updateDiagram(){
+  state.project.name = document.getElementById('projName').value;
+  state.project.owner = document.getElementById('projOwner').value;
+  state.project.period = document.getElementById('projPeriod').value;
+  state.project.location = document.getElementById('projLocation').value;
+
+  const d = document.getElementById('diagram');
+  d.innerHTML = '';
+  // project header
+  const ph = document.createElement('div');
+  ph.className = 'project-header';
+  ph.innerHTML = `<h2>施工体系図</h2>
+    <div class="meta">工事名：${escapeHtml(state.project.name||'（未入力）')}　／　発注者：${escapeHtml(state.project.owner||'')}</div>
+    <div class="meta">工期：${escapeHtml(state.project.period||'')}　／　場所：${escapeHtml(state.project.location||'')}</div>`;
+  d.appendChild(ph);
+
+  if(state.companies.length===0){
+    d.innerHTML += '<div class="empty-msg">左パネルから会社を追加してください</div>';
+    return;
+  }
+
+  // render by tier
+  const tiers = ['prime','sub-1','sub-2','sub-3','sub-4'];
+  tiers.forEach(t=>{
+    const list = state.companies.filter(c=>c.tier===t);
+    if(list.length===0) return;
+    const row = document.createElement('div');
+    row.className = 'tier-row';
+    row.innerHTML = `<div class="tier-label">■ ${tierLabel(t)}</div>`;
+
+    if(t==='prime'){
+      list.forEach(c=>row.appendChild(buildNode(c)));
+    } else {
+      // group by parent
+      const parentTier = {'sub-1':'prime','sub-2':'sub-1','sub-3':'sub-2','sub-4':'sub-3'}[t];
+      const parents = state.companies.filter(p=>p.tier===parentTier);
+      const grouped = {};
+      list.forEach(c=>{
+        const k = c.parentId||'_orphan';
+        (grouped[k] = grouped[k]||[]).push(c);
+      });
+      parents.forEach(p=>{
+        if(!grouped[p.id]) return;
+        const g = document.createElement('div');
+        g.className = 'group';
+        g.innerHTML = `<div class="group-title">└ 上位：${escapeHtml(p.name)}</div>`;
+        const inner = document.createElement('div');
+        inner.style.display='flex'; inner.style.flexWrap='wrap'; inner.style.gap='10px';
+        grouped[p.id].forEach(c=>inner.appendChild(buildNode(c)));
+        g.appendChild(inner);
+        row.appendChild(g);
+      });
+      if(grouped._orphan){
+        const g = document.createElement('div'); g.className='group';
+        g.innerHTML = '<div class="group-title" style="color:#b33a3a">└ 上位未設定</div>';
+        const inner = document.createElement('div'); inner.style.display='flex'; inner.style.flexWrap='wrap'; inner.style.gap='10px';
+        grouped._orphan.forEach(c=>inner.appendChild(buildNode(c)));
+        g.appendChild(inner); row.appendChild(g);
+      }
+    }
+    d.appendChild(row);
+  });
+}
+
+function buildNode(c){
+  const el = document.createElement('div');
+  el.className = 'node ' + c.tier;
+  el.innerHTML = `
+    <div class="node-head"><span>${tierLabel(c.tier)}</span><span>${escapeHtml(c.name||'')}</span></div>
+    <div class="node-body">
+      ${c.rep?`<div><span class="label">代表者</span>${escapeHtml(c.rep)}</div>`:''}
+      ${c.work?`<div><span class="label">工事内容</span>${escapeHtml(c.work)}</div>`:''}
+      ${c.period?`<div><span class="label">工期</span>${escapeHtml(c.period)}</div>`:''}
+      ${c.agent?`<div><span class="label">現場代理人</span>${escapeHtml(c.agent)}</div>`:''}
+      ${c.engineer?`<div><span class="label">主任/監理</span>${escapeHtml(c.engineer)}</div>`:''}
+      ${c.safety?`<div><span class="label">安全衛生</span>${escapeHtml(c.safety)}</div>`:''}
+      ${c.specialist?`<div><span class="label">専門技術者</span>${escapeHtml(c.specialist)}</div>`:''}
+      ${c.note?`<div style="color:#666;margin-top:3px">${escapeHtml(c.note)}</div>`:''}
+    </div>`;
+  el.onclick = ()=>editCompany(c.id);
+  el.style.cursor = 'pointer';
+  return el;
+}
+
+function saveJSON(){
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (state.project.name||'施工体系図')+'.json';
+  a.click();
+}
+function loadJSON(e){
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = ev=>{
+    try {
+      state = JSON.parse(ev.target.result);
+      hydrate();
+    } catch(err){ alert('読込失敗: '+err.message); }
+  };
+  r.readAsText(f);
+}
+function hydrate(){
+  document.getElementById('projName').value = state.project.name||'';
+  document.getElementById('projOwner').value = state.project.owner||'';
+  document.getElementById('projPeriod').value = state.project.period||'';
+  document.getElementById('projLocation').value = state.project.location||'';
+  renderLedgerList();
+  updateDiagram();
+  localStorage.setItem('sekoTaikei', JSON.stringify(state));
+}
+function clearAll(){
+  if(!confirm('全データを消去します。よろしいですか？')) return;
+  state = { project:{name:'',owner:'',period:'',location:''}, companies:[] };
+  hydrate();
+}
+function loadSample(){
+  state = {
+    project: { name:'○○ビル新築工事', owner:'株式会社 発注太郎', period:'2026/04/01 〜 2027/03/31', location:'東京都千代田区○○1-2-3' },
+    companies: [
+      {id:'p1', tier:'prime', parentId:null, name:'大手建設株式会社', rep:'代表取締役 山田一郎', work:'建築一式工事', period:'2026/4/1〜2027/3/31', agent:'佐藤 次郎', engineer:'鈴木 三郎（監理技術者）', safety:'田中 四郎', specialist:'', note:''},
+      {id:'s1a', tier:'sub-1', parentId:'p1', name:'○○鉄筋工業(株)', rep:'高橋 五郎', work:'鉄筋工事', period:'2026/5/1〜2026/9/30', agent:'伊藤 六郎', engineer:'渡辺 七郎', safety:'山本 八郎', specialist:'', note:''},
+      {id:'s1b', tier:'sub-1', parentId:'p1', name:'△△型枠(株)', rep:'中村 九郎', work:'型枠工事', period:'2026/5/1〜2026/10/31', agent:'小林 十郎', engineer:'加藤 十一', safety:'吉田 十二', specialist:'', note:''},
+      {id:'s1c', tier:'sub-1', parentId:'p1', name:'□□電設工業(株)', rep:'松本 十三', work:'電気工事', period:'2026/8/1〜2027/2/28', agent:'井上 十四', engineer:'木村 十五', safety:'林 十六', specialist:'', note:''},
+      {id:'s2a', tier:'sub-2', parentId:'s1a', name:'小野鉄筋加工(有)', rep:'小野 太一', work:'鉄筋加工', period:'2026/5/1〜2026/8/31', agent:'清水 太二', engineer:'森 太三', safety:'池田 太四', specialist:'', note:''},
+      {id:'s2b', tier:'sub-2', parentId:'s1c', name:'電気配線工事(株)', rep:'橋本 太五', work:'配線', period:'2026/9/1〜2027/1/31', agent:'山口 太六', engineer:'前田 太七', safety:'岡田 太八', specialist:'', note:''},
+    ]
+  };
+  hydrate();
+}
+
+// load from localStorage if any
+try {
+  const saved = localStorage.getItem('sekoTaikei');
+  if(saved) state = JSON.parse(saved);
+} catch(e){}
+
+hydrate();
+
+// autosave
+setInterval(()=>{ try{ localStorage.setItem('sekoTaikei', JSON.stringify(state)); }catch(e){} }, 3000);
+</script>
+</body>
+</html>

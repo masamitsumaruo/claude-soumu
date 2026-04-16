@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}稟議書 #{{ ringi['id'] }} - 文房具管理{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-text"></i> 稟議書 #{{ ringi['id'] }}</h2>
+    <div class="d-flex gap-2">
+        {% if ringi['status'] == 'approved' %}
+        <a href="/ringi/{{ ringi['id'] }}/pdf" class="btn btn-outline-danger" target="_blank"><i class="bi bi-file-pdf"></i> PDF表示</a>
+        <a href="/ringi/{{ ringi['id'] }}/csv" class="btn btn-outline-success"><i class="bi bi-download"></i> CSV出力</a>
+        {% endif %}
+        <a href="/ringi" class="btn btn-outline-secondary">一��に戻る</a>
+    </div>
+</div>
+
+<div class="card p-4 mb-4">
+    <div class="row mb-3">
+        <div class="col-md-3"><strong>作成日:</strong> {{ ringi['created_date'] }}</div>
+        <div class="col-md-3"><strong>ステータス:</strong>
+            {% if ringi['status'] == 'draft' %}
+            <span class="badge bg-secondary fs-6">下書き</span>
+            {% elif ringi['status'] == 'approved' %}
+            <span class="badge bg-success fs-6">承認済</span>
+            {% elif ringi['status'] == 'rejected' %}
+            <span class="badge bg-danger fs-6">却下</span>
+            {% endif %}
+        </div>
+        <div class="col-md-3"><strong>承認��:</strong> {{ ringi['approver'] or '未承認' }}</div>
+        <div class="col-md-3"><strong>承認日:</strong> {{ ringi['approved_date'] or '-' }}</div>
+    </div>
+
+    <h5 class="mt-3">事務用���・消耗品 購入稟議書</h5>
+    <div class="table-responsive">
+        <table class="table table-bordered">
+            <thead class="table-light">
+                <tr><th>No.</th><th>購入先</th><th>商品名</th><th>個数</th><th>単価</th><th>���額</th><th>新規</th><th>使用目��</th><th>依頼者</th><th>検索URL</th></tr>
+            </thead>
+            <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ item['supplier'] }}</td>
+                <td>{{ item['product_name'] }}</td>
+                <td>{{ item['quantity'] }}</td>
+                <td>{{ "{:,}".format(item['unit_price']) }}</td>
+                <td>{{ "{:,}".format(item['amount']) }}</td>
+                <td>{% if item['is_new'] %}<span class="badge bg-info">新規</span>{% endif %}</td>
+                <td>{{ item['purpose'] }}</td>
+                <td>{{ item['requester'] }}</td>
+                <td>{% if item['search_url'] %}<a href="{{ item['search_url'] }}" target="_blank" class="btn btn-sm btn-outline-info"><i class="bi bi-link-45deg"></i> 開く</a>{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="5" class="text-end fw-bold">合計</td>
+                    <td class="fw-bold">{{ "{:,}".format(items|sum(attribute='amount')) }}</td>
+                    <td colspan="4"></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+{% if ringi['status'] == 'draft' %}
+<div class="card p-4">
+    <h5>承認・却下</h5>
+    <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <form method="POST" action="/ringi/{{ ringi['id'] }}/approve" class="d-flex gap-2">
+                <input name="approver" class="form-control" placeholder="承認者名" required>
+                <button type="submit" class="btn btn-success text-nowrap" onclick="return confirm('承認しますか？在庫数が更新されます。')"><i class="bi bi-check-lg"></i> 承認</button>
+            </form>
+        </div>
+        <div class="col-md-2">
+            <form method="POST" action="/ringi/{{ ringi['id'] }}/reject">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('却下しますか？')"><i class="bi bi-x-lg"></i> 却���</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

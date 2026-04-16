@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \":*)",
+      "Bash(pip install:*)",
+      "Bash(python init_db.py)",
+      "Bash(taskkill //F //IM python.exe)",
+      "Bash(taskkill //F //IM python3.11.exe)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(python -c \"import flask; print\\(flask.__version__\\)\")",
+      "Bash(where python:*)",
+      "Read(//c/Users/acuma/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/1f94b74a-32ff-44b8-a732-c2a46c41e296/d3287886-c365-4f1d-abcc-006fcbef84e6/skills/xlsx/**)",
+      "WebFetch(domain:bunbougu-system.onrender.com)",
+      "WebFetch(domain:help.greenfile.work)",
+      "Bash(pip --version)",
+      "Bash(python -c \"import markitdown; print\\('markitdown OK', markitdown.__version__ if hasattr\\(markitdown,'__version__'\\) else ''\\)\")",
+      "Bash(python -c \"import markitdown_mcp; import os; print\\(os.path.dirname\\(markitdown_mcp.__file__\\)\\)\")",
+      "Bash(claude mcp:*)",
+      "Bash(python -c \"import json; d=json.load\\(open\\(r'C:\\\\Users\\\\acuma\\\\.claude.json'\\)\\); print\\(list\\(d.keys\\(\\)\\)\\)\")",
+      "Bash(python -c \"import json; d=json.load\\(open\\(r'C:\\\\Users\\\\acuma\\\\.claude.json', encoding='utf-8'\\)\\); print\\(list\\(d.keys\\(\\)\\)\\); print\\('has mcpServers:', 'mcpServers' in d\\)\")",
+      "Bash(python -c ':*)"
+    ]
+  }
+}

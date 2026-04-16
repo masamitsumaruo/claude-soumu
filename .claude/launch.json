@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "soumu-app",
+      "runtimeExecutable": "C:\\Users\\acuma\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe",
+      "runtimeArgs": ["app.py"],
+      "port": 5000
+    },
+    {
+      "name": "seko-taikei",
+      "runtimeExecutable": "C:\\Users\\acuma\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe",
+      "runtimeArgs": ["-m", "http.server", "8765"],
+      "port": 8765
+    }
+  ]
+}

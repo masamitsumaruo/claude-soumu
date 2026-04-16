@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>稟議書 #{{ ringi['id'] }}</title>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { margin: 0; }
+        }
+        body { font-family: "Yu Gothic", "Meiryo", sans-serif; padding: 30px; max-width: 900px; margin: 0 auto; color: #333; }
+        h1 { text-align: center; font-size: 24px; border-bottom: 3px double #333; padding-bottom: 10px; margin-bottom: 20px; }
+        .header-info { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 14px; }
+        .header-info div { margin-bottom: 5px; }
+        .stamp-area { display: flex; gap: 2px; justify-content: flex-end; margin-bottom: 20px; }
+        .stamp-box { width: 70px; height: 80px; border: 1px solid #333; text-align: center; }
+        .stamp-box .label { background: #f0f0f0; border-bottom: 1px solid #333; padding: 2px; font-size: 11px; }
+        .stamp-box .content { padding: 10px 5px; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }
+        th, td { border: 1px solid #333; padding: 6px 8px; }
+        th { background: #f5f5f5; font-weight: bold; text-align: center; white-space: nowrap; }
+        td { text-align: center; }
+        td.left { text-align: left; }
+        .total-row { background: #f9f9f9; font-weight: bold; }
+        .url-cell { font-size: 10px; word-break: break-all; text-align: left; max-width: 200px; }
+        .footer { margin-top: 30px; font-size: 12px; }
+        .btn-print { background: #3498db; color: #fff; border: none; padding: 10px 30px; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        .btn-print:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="text-align:center; margin-bottom:20px;">
+        <button class="btn-print" onclick="window.print()">PDF印刷 / 保存</button>
+        <a href="/ringi/{{ ringi['id'] }}" style="margin-left:10px;">戻る</a>
+    </div>
+
+    <h1>事務用品・消耗品 購入稟議書</h1>
+
+    <div class="stamp-area">
+        <div class="stamp-box">
+            <div class="label">担当</div>
+            <div class="content">{{ ringi['approver'] or '' }}</div>
+        </div>
+        <div class="stamp-box">
+            <div class="label">課長</div>
+            <div class="content"></div>
+        </div>
+        <div class="stamp-box">
+            <div class="label">部長</div>
+            <div class="content"></div>
+        </div>
+    </div>
+
+    <div class="header-info">
+        <div>
+            <div>作成日: {{ ringi['created_date'] }}</div>
+            <div>承認日: {{ ringi['approved_date'] or '-' }}</div>
+        </div>
+        <div>
+            <div>ステータス:
+                {% if ringi['status'] == 'approved' %}承認済
+                {% elif ringi['status'] == 'rejected' %}却下
+                {% else %}下書き{% endif %}
+            </div>
+            <div>承認者: {{ ringi['approver'] or '' }}</div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>No.</th>
+                <th>購入先</th>
+                <th>商品名</th>
+                <th>個数</th>
+                <th>単価</th>
+                <th>金額</th>
+                <th>新規</th>
+                <th>使用目的</th>
+                <th>依頼者</th>
+                <th>購入先URL</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ item['supplier'] }}</td>
+                <td class="left">{{ item['product_name'] }}</td>
+                <td>{{ item['quantity'] }}</td>
+                <td>{{ "{:,}".format(item['unit_price']) }}</td>
+                <td>{{ "{:,}".format(item['amount']) }}</td>
+                <td>{% if item['is_new'] %}○{% endif %}</td>
+                <td class="left">{{ item['purpose'] }}</td>
+                <td>{{ item['requester'] }}</td>
+                <td class="url-cell">{% if item['search_url'] %}{{ item['search_url'] }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+            {% for i in range(items|length, 20) %}
+            <tr><td>{{ i + 1 }}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td colspan="5">合計</td>
+                <td>{{ "{:,}".format(items|sum(attribute='amount')) }}</td>
+                <td colspan="4"></td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="footer">
+        <p>備考: 承認後、上記商品を発注いたします。</p>
+    </div>
+</body>
+</html>
