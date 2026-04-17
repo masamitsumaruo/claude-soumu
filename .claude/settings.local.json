@@ -18,7 +18,13 @@
       "Bash(claude mcp:*)",
       "Bash(python -c \"import json; d=json.load\\(open\\(r'C:\\\\Users\\\\acuma\\\\.claude.json'\\)\\); print\\(list\\(d.keys\\(\\)\\)\\)\")",
       "Bash(python -c \"import json; d=json.load\\(open\\(r'C:\\\\Users\\\\acuma\\\\.claude.json', encoding='utf-8'\\)\\); print\\(list\\(d.keys\\(\\)\\)\\); print\\('has mcpServers:', 'mcpServers' in d\\)\")",
-      "Bash(python -c ':*)"
+      "Bash(python -c ':*)",
+      "Bash(gh repo:*)",
+      "Bash(gh api:*)",
+      "Bash(python -c \"import json; d=json.load\\(open\\(r'C:\\\\Users\\\\acuma\\\\OneDrive\\\\デスクトップ\\\\claude-soumu\\\\excel_data.json','r',encoding='utf-8'\\)\\); print\\('Keys:', list\\(d.keys\\(\\)\\)\\); print\\('商品一覧 count:', len\\(d['商品一覧']\\)\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(python import_products.py)",
+      "Bash(python sync_excel.py)"
     ]
   }
 }
